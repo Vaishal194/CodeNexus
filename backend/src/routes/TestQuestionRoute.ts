@@ -5,7 +5,7 @@ import { addQuestion, deleteQuestion, fetchAllQuestions, fetchTestQuestionById }
 const router=express.Router()
 
 router.post("/add",addQuestion)
-router.post("/remove/:id",deleteQuestion)
+router.get("/remove/:id",deleteQuestion)
 router.get("/fetch/:id",fetchTestQuestionById)
 router.get("/fetch",fetchAllQuestions)
 export default router

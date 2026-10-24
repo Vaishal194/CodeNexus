@@ -17,7 +17,6 @@ export async function addQuestion(req:Request,res:Response){
         })
     }
 }
-
 export async function deleteQuestion(req:Request,res:Response){
     const id:Number=Number(req.params.body)
     try{
