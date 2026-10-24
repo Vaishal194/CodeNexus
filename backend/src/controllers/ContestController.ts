@@ -1,7 +1,8 @@
 import express from "express"
 import { Request,Response } from "express"
 import { createTest } from "../interfaces/Contest.js"
-import { addTest, fetchAllTests, fetchTestsById, publishTest, removeTest } from "../services/ContestService.js"
+import { addTest, fetchAllTests, fetchTestsById, publishTest, removeTest ,published, testDetails, fetchTestQuestions} from "../services/ContestService.js"
+import test from "node:test"
 
 export async function create(req:Request,res:Response){
     const data:createTest=req.body
@@ -81,3 +82,51 @@ export async function fetchById(req:Request,res:Response) {
         })
     }
 }
+
+export async function PublishedTests(req:Request,res:Response){
+    try{
+        const result=await published()
+        res.status(201).json({
+            "status":`Success`,
+            data:result
+        })
+    }catch(error:any){
+        res.status(500).json({
+            "status":"Failed to fetch the Tests",
+            "error":error.message
+        })
+    }
+}
+
+export async function fetchTestDetails(req:Request,res:Response){
+    const id:Number=Number(req.params.id)
+    try{
+        const result=await testDetails(id)
+        res.status(201).json({
+            "status":`Success`,
+            data:result
+        })
+    }catch(error:any){
+         res.status(500).json({
+            "status":"Failed to fetch the testDetails",
+            "error":error.message
+        })
+    }
+}
+
+export async function fetchTestQuestion(req:Request,res:Response){
+    const testId:Number=Number(req.params.id)
+    try{
+        const result=await fetchTestQuestions(testId)
+        res.status(201).json({
+            "status":`Success`,
+            data:result
+        })
+    }catch(error:any){
+         res.status(500).json({
+            "status":"Failed to fetch the Questions",
+            "error":error.message
+        })
+    }
+}
+

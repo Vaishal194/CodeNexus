@@ -54,3 +54,55 @@ export async function publishTest(testId:Number,adminId:string){
 
     return result.rows[0];
 }
+
+export async function published(){
+    const query=`SELECT id,title,description,duration_minutes,total_marks FROM tests where IS_PUBLISHED=$1`
+    const res=await pool.query(query,[true])
+    return res.rows
+}
+
+export async function testDetails(id:Number){
+    const query=`SELECT id,title,description,duration_minutes,total_marks FROM tests where id=$1 AND IS_PUBLISHED=$2`
+    const res=await pool.query(query,[id,true])
+    return res.rows
+}
+
+export async function fetchTestQuestions(testId: Number) {
+    const query = `
+        SELECT
+            tq.id AS test_question_id,
+            tq.test_id,
+            tq.question_type,
+            tq.marks,
+            tq.sequence_number,
+
+            mcq.id AS mcq_id,
+            mcq.question AS mcq_question,
+            mcq.options AS mcq_options,
+
+            p.id AS problem_id,
+            p.title AS problem_title,
+            p.description AS problem_description,
+            p.difficulty AS problem_difficulty,
+            p.supported_languages,
+            p.input_format AS input_format,
+            p.output_format AS output_format,
+            p.constraints
+
+        FROM test_questions tq
+
+        LEFT JOIN mcq_questions mcq
+            ON tq.mcq_id = mcq.id
+
+        LEFT JOIN problems p
+            ON tq.problem_id = p.id
+
+        WHERE tq.test_id = $1
+
+        ORDER BY tq.sequence_number ASC;
+    `;
+
+    const result = await pool.query(query, [testId]);
+
+    return result.rows;
+}
