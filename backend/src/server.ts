@@ -7,6 +7,8 @@ import TestCaseRoute from "../src/routes/TestCaseRoute.js"
 import ContestRoute from "../src/routes/ContestRoute.js"
 import MCQRoutes from "../src/routes/MCQRoutes.js"
 import TestQuestionRoute from "../src/routes/TestQuestionRoute.js"
+import TestAttemptRoute from "../src/routes/TestAttemptRoutes.js"
+import AttemptAnswerRoute from "../src/routes/AttemptAnswerRoute.js"
 const app=express()
 const port = 5000
 app.use(cors())
@@ -22,6 +24,8 @@ app.use("/testcase",TestCaseRoute)
 app.use("/contest",ContestRoute)
 app.use("/question",TestQuestionRoute)
 app.use("/Mcq",MCQRoutes)
+app.use("/attempts", TestAttemptRoute);
+app.use("/attempt",AttemptAnswerRoute)
 app.listen(port,()=>{
     console.log(`Using Port: ${port}`)
 })
