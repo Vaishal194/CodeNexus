@@ -29,3 +29,15 @@ export async function getHiddenCases(id:Number){
     const res=await pool.query(query,values)
     return res.rows
 }
+
+export async function generateAllTestCases(problem_id:Number){
+    const query = `
+        SELECT id, input, expected_output, is_hidden, sequence_number
+        FROM test_cases
+        WHERE problem_id = $1
+        ORDER BY sequence_number ASC, id ASC
+    `;
+
+    const result = await pool.query(query, [problem_id]);
+    return result.rows;
+}

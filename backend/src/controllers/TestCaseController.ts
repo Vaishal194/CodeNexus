@@ -1,5 +1,5 @@
 import { testCase } from "../interfaces/testCase.js";
-import { addTestCase, getHiddenCases, getTestCases, removeTestCase } from "../services/TestCasesService.js";
+import { addTestCase, generateAllTestCases, getHiddenCases, getTestCases, removeTestCase } from "../services/TestCasesService.js";
 import { Request,Response } from "express";
 
 export async function addCase(req:Request,res:Response){
@@ -50,6 +50,19 @@ export async function getTestCasesById(req:Request,res:Response){
     const id=Number(req.params.id)
     try{
         const result=await getTestCases(id)
+        return res.status(201).send(result)
+
+    }catch(error:any){
+        res.status(500).json({
+            "error":error.message
+        })
+    }
+}
+
+export async function getAllTestCasesById(req:Request,res:Response){
+    const problem_id=Number(req.params.id)
+    try{
+        const result=await generateAllTestCases(problem_id)
         return res.status(201).send(result)
 
     }catch(error:any){
