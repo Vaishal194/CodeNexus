@@ -1,7 +1,6 @@
-
-import {pool} from "../database.js"; // Adjust to your actual database pool path
+import { pool } from "../database.js";
 import executeCode from "./ExecutionService.js";
-import { ExecutionResult } from "../interfaces/ExecutionResult.js";
+import type { ExecutionResult } from "../interfaces/ExecutionResult.js";
 
 type CodeSubmissionStatus =
     | "ACCEPTED"
@@ -10,7 +9,9 @@ type CodeSubmissionStatus =
     | "COMPILATION_ERROR"
     | "RUNTIME_ERROR";
 
-function mapStatus(status: ExecutionResult["status"]): CodeSubmissionStatus {
+function mapStatus(
+    status: ExecutionResult["status"]
+): CodeSubmissionStatus {
     switch (status) {
         case "Accepted":
             return "ACCEPTED";
@@ -36,55 +37,76 @@ export async function submitCode(
     language: string,
     code: string
 ) {
-    const validation = await pool.query(
-        `SELECT
-            ta.id AS attempt_id,
-            ta.status AS attempt_status,
-            tq.id AS test_question_id,
-            tq.problem_id,
-            tq.marks
-         FROM test_attempts ta
-         JOIN test_questions tq
-           ON tq.test_id = ta.test_id
-         WHERE ta.id = $1
-           AND tq.id = $2
-           AND tq.question_type = 'coding'`,
-        [attemptId, testQuestionId]
-    );
+    let submissionId: number | string;
 
-    if (validation.rowCount === 0) {
-        throw new Error(
-            "Attempt or coding question not found"
-        );
-    }
+    let problemId: number;
+    let questionMarks: number;
 
-    const question = validation.rows[0];
-
-    if (question.attempt_status !== "IN_PROGRESS") {
-        throw new Error("Attempt is not active");
-    }
-
-    // 2. Create a submission record.
-    const inserted = await pool.query(
-        `INSERT INTO code_submissions
-            (attempt_id, test_question_id, language,
-             source_code, status)
-         VALUES ($1, $2, $3, $4, 'RUNNING')
-         RETURNING id`,
-        [attemptId, testQuestionId, language, code]
-    );
-
-    const submissionId = inserted.rows[0].id;
+    // 1. Lock the attempt and create the submission atomically.
+    const client = await pool.connect();
 
     try {
-        // 3. Execute the code against the problem's test cases.
+        await client.query("BEGIN");
+
+        const validation = await client.query(
+            `SELECT
+                ta.id AS attempt_id,
+                ta.status AS attempt_status,
+                tq.id AS test_question_id,
+                tq.problem_id,
+                tq.marks
+             FROM test_attempts AS ta
+             JOIN test_questions AS tq
+               ON tq.test_id = ta.test_id
+             WHERE ta.id = $1
+               AND tq.id = $2
+               AND LOWER(tq.question_type) = 'coding'
+             FOR UPDATE OF ta`,
+            [attemptId, testQuestionId]
+        );
+
+        if (validation.rowCount === 0) {
+            throw new Error(
+                "Attempt or coding question not found"
+            );
+        }
+
+        const question = validation.rows[0];
+
+        if (question.attempt_status !== "IN_PROGRESS") {
+            throw new Error("Attempt is not active");
+        }
+
+        problemId = Number(question.problem_id);
+        questionMarks = Number(question.marks);
+
+        const inserted = await client.query(
+            `INSERT INTO code_submissions
+                (attempt_id, test_question_id, language,
+                 source_code, status)
+             VALUES ($1, $2, $3, $4, 'RUNNING')
+             RETURNING id`,
+            [attemptId, testQuestionId, language, code]
+        );
+
+        submissionId = inserted.rows[0].id;
+
+        await client.query("COMMIT");
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
+
+    // 2. Execute only after the transaction and row lock are released.
+    try {
         const result: ExecutionResult = await executeCode(
-            Number(question.problem_id),
+            problemId,
             language,
             code
         );
 
-        // 4. Read the runner's test-case summary.
         let passed = 0;
         let total = 0;
 
@@ -101,27 +123,26 @@ export async function submitCode(
                 passed < 0 ||
                 passed > total
             ) {
-                throw new Error("Invalid test-case summary");
+                throw new Error(
+                    "Invalid test-case summary"
+                );
             }
         }
 
-        // Award proportional marks for coding questions.
-        // Accepted solutions receive full marks.
         const status = mapStatus(result.status);
 
         const marksAwarded =
             status === "ACCEPTED"
-                ? Number(question.marks)
+                ? questionMarks
                 : total > 0
                     ? Number(
                         (
-                            Number(question.marks) *
-                            passed / total
+                            questionMarks * passed / total
                         ).toFixed(2)
                     )
                     : 0;
 
-        // 5. Save the final execution result.
+        // 3. Save the final execution result.
         const updated = await pool.query(
             `UPDATE code_submissions
              SET status = $1,
@@ -147,6 +168,7 @@ export async function submitCode(
             error: result.error ?? null
         };
     } catch (error) {
+        // Mark failed execution attempts so they do not remain RUNNING.
         await pool.query(
             `UPDATE code_submissions
              SET status = 'RUNTIME_ERROR',

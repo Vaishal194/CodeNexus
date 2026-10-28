@@ -1,5 +1,4 @@
 import { pool } from "../database.js";
-
 export async function startAttempt(
     testId: number,
     studentId: string
@@ -60,8 +59,8 @@ export async function startAttempt(
 }
 
 export async function getAttempt(attemptId: number) {
-    const query = `
-        SELECT
+    const result = await pool.query(
+        `SELECT
             id,
             test_id,
             student_id,
@@ -70,11 +69,10 @@ export async function getAttempt(attemptId: number) {
             status,
             total_marks,
             score
-        FROM test_attempts
-        WHERE id = $1
-    `;
-
-    const result = await pool.query(query, [attemptId]);
+         FROM test_attempts
+         WHERE id = $1`,
+        [attemptId]
+    );
 
     if (result.rowCount === 0) {
         throw new Error("Attempt not found");
@@ -83,14 +81,14 @@ export async function getAttempt(attemptId: number) {
     return result.rows[0];
 }
 
-
 export async function submitAttempt(attempt_id: number) {
     const client = await pool.connect();
 
     try {
         await client.query("BEGIN");
 
-        const attempt = await client.query(
+        // 1. Lock the attempt to prevent concurrent final submissions.
+        const attemptResult = await client.query(
             `SELECT id, status
              FROM test_attempts
              WHERE id = $1
@@ -98,13 +96,33 @@ export async function submitAttempt(attempt_id: number) {
             [attempt_id]
         );
 
-        if (attempt.rowCount === 0) {
+        if (attemptResult.rowCount === 0) {
             throw new Error("Attempt not found");
         }
 
-        if (attempt.rows[0].status !== "IN_PROGRESS") {
-            throw new Error("Attempt has already been submitted");
+        if (attemptResult.rows[0].status !== "IN_PROGRESS") {
+            throw new Error(
+                "Attempt has already been submitted or is not active"
+            );
         }
+
+        // 2. Do not finalize while code is still executing.
+        const runningCode = await client.query(
+            `SELECT id
+             FROM code_submissions
+             WHERE attempt_id = $1
+               AND status IN ('PENDING', 'RUNNING')
+             LIMIT 1`,
+            [attempt_id]
+        );
+
+        if (runningCode.rowCount !== 0) {
+            throw new Error(
+                "Code execution is still running. Please wait."
+            );
+        }
+
+        // 3. Grade all answered MCQ questions.
         await client.query(
             `UPDATE attempt_answers AS aa
              SET marks_awarded =
@@ -122,6 +140,7 @@ export async function submitAttempt(attempt_id: number) {
             [attempt_id]
         );
 
+        // 4. Calculate MCQ score.
         const scoreResult = await client.query(
             `SELECT COALESCE(SUM(aa.marks_awarded), 0) AS score
              FROM attempt_answers AS aa
@@ -132,17 +151,44 @@ export async function submitAttempt(attempt_id: number) {
             [attempt_id]
         );
 
-        const score = Number(scoreResult.rows[0].score);
+        // 5. Calculate the best score for each coding question.
+        const codeScore = await client.query(
+            `SELECT COALESCE(SUM(best_marks), 0) AS coding_score
+             FROM (
+                 SELECT
+                     cs.test_question_id,
+                     MAX(cs.marks_awarded) AS best_marks
+                 FROM code_submissions AS cs
+                 JOIN test_questions AS tq
+                     ON tq.id = cs.test_question_id
+                 WHERE cs.attempt_id = $1
+                   AND LOWER(tq.question_type) = 'coding'
+                   AND cs.status NOT IN ('PENDING', 'RUNNING')
+                 GROUP BY cs.test_question_id
+             ) AS best_submissions`,
+            [attempt_id]
+        );
 
+        const mcqMarks = Number(scoreResult.rows[0].score);
+        const codingMarks = Number(codeScore.rows[0].coding_score);
+        const score = mcqMarks + codingMarks;
+
+        // 6. Save the final score and submit the attempt.
         const submit = await client.query(
             `UPDATE test_attempts
              SET score = $1,
                  status = 'SUBMITTED',
                  submitted_at = NOW()
              WHERE id = $2
-             RETURNING id, test_id, score, status, submitted_at`,
+               AND status = 'IN_PROGRESS'
+             RETURNING id, test_id, score, total_marks,
+                       status, submitted_at`,
             [score, attempt_id]
         );
+
+        if (submit.rowCount === 0) {
+            throw new Error("Unable to submit attempt");
+        }
 
         await client.query("COMMIT");
 
