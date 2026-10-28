@@ -83,11 +83,21 @@ export async function getAttempt(attemptId: number) {
     return result.rows[0];
 }
 
+
 export async function submitAttempt(attempt_id: number) {
+    const client = await pool.connect();
+
     try {
-        await pool.query("BEGIN")
-        const attempt = await pool.query(`
-            SELECT ID,STATUS FROM TEST_ATTEMPTS WHERE ID=$1 FOR UPDATE`, [attempt_id])
+        await client.query("BEGIN");
+
+        const attempt = await client.query(
+            `SELECT id, status
+             FROM test_attempts
+             WHERE id = $1
+             FOR UPDATE`,
+            [attempt_id]
+        );
+
         if (attempt.rowCount === 0) {
             throw new Error("Attempt not found");
         }
@@ -95,23 +105,24 @@ export async function submitAttempt(attempt_id: number) {
         if (attempt.rows[0].status !== "IN_PROGRESS") {
             throw new Error("Attempt has already been submitted");
         }
-        const grade = await pool.query(`
-    UPDATE attempt_answers AS aa
-    SET marks_awarded =
-        CASE
-            WHEN aa.selected_option = mcq.correct_option
-            THEN tq.marks
-            ELSE 0
-        END
-    FROM test_questions AS tq
-    JOIN mcq_questions AS mcq
-        ON mcq.id = tq.mcq_id
-    WHERE aa.attempt_id = $1
-      AND aa.test_question_id = tq.id
-      AND LOWER(tq.question_type) = 'mcq'
-    `, [attempt_id]);
+        await client.query(
+            `UPDATE attempt_answers AS aa
+             SET marks_awarded =
+                 CASE
+                     WHEN aa.selected_option = mcq.correct_option
+                     THEN tq.marks
+                     ELSE 0
+                 END
+             FROM test_questions AS tq
+             JOIN mcq_questions AS mcq
+                 ON mcq.id = tq.mcq_id
+             WHERE aa.attempt_id = $1
+               AND aa.test_question_id = tq.id
+               AND LOWER(tq.question_type) = 'mcq'`,
+            [attempt_id]
+        );
 
-        const scoreResult = await pool.query(
+        const scoreResult = await client.query(
             `SELECT COALESCE(SUM(aa.marks_awarded), 0) AS score
              FROM attempt_answers AS aa
              JOIN test_questions AS tq
@@ -123,16 +134,23 @@ export async function submitAttempt(attempt_id: number) {
 
         const score = Number(scoreResult.rows[0].score);
 
-        const submit = await pool.query(`
-            UPDATE TEST_ATTEMPTS AS TQ SET score=$1, STATUS='SUBMITTED',submitted_at=NOW() WHERE id = $2
+        const submit = await client.query(
+            `UPDATE test_attempts
+             SET score = $1,
+                 status = 'SUBMITTED',
+                 submitted_at = NOW()
+             WHERE id = $2
              RETURNING id, test_id, score, status, submitted_at`,
-            [score, attempt_id])
-        await pool.query("COMMIT");
+            [score, attempt_id]
+        );
+
+        await client.query("COMMIT");
 
         return submit.rows[0];
-
-    } catch (error: any) {
-        await pool.query("ROLLBACK");
+    } catch (error) {
+        await client.query("ROLLBACK");
         throw error;
+    } finally {
+        client.release();
     }
 }

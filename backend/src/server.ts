@@ -9,6 +9,7 @@ import MCQRoutes from "../src/routes/MCQRoutes.js"
 import TestQuestionRoute from "../src/routes/TestQuestionRoute.js"
 import TestAttemptRoute from "../src/routes/TestAttemptRoutes.js"
 import AttemptAnswerRoute from "../src/routes/AttemptAnswerRoute.js"
+import CodeSubmissionRoute from "../src/routes/CodeSubmissionRoute.js"
 const app=express()
 const port = 5000
 app.use(cors())
@@ -26,6 +27,7 @@ app.use("/question",TestQuestionRoute)
 app.use("/Mcq",MCQRoutes)
 app.use("/attempts", TestAttemptRoute);
 app.use("/attempt",AttemptAnswerRoute)
+app.use("/submit-code",CodeSubmissionRoute)
 app.listen(port,()=>{
     console.log(`Using Port: ${port}`)
 })

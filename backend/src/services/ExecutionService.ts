@@ -3,7 +3,7 @@ import JavaRunner from "../runners/javaRunner.js";
 import PythonRunner from "../runners/pythonRunner.js";
 import { generateAllTestCases } from "./TestCasesService.js";
 
-export default async function (
+export default async function executeCode(
     problemId: number,
     lang: string,
     code: string
