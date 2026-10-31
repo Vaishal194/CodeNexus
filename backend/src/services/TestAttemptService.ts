@@ -1,4 +1,5 @@
 import { pool } from "../database.js";
+
 export async function startAttempt(
     testId: number,
     studentId: string
@@ -58,7 +59,8 @@ export async function startAttempt(
     }
 }
 
-export async function getAttempt(attemptId: number) {
+
+export async function getAttempt(attemptId: number,student_id:string) {
     const result = await pool.query(
         `SELECT
             id,
@@ -70,8 +72,8 @@ export async function getAttempt(attemptId: number) {
             total_marks,
             score
          FROM test_attempts
-         WHERE id = $1`,
-        [attemptId]
+         WHERE id = $1 AND student_id=$2`,
+        [attemptId,student_id]
     );
 
     if (result.rowCount === 0) {
@@ -81,19 +83,18 @@ export async function getAttempt(attemptId: number) {
     return result.rows[0];
 }
 
-export async function submitAttempt(attempt_id: number) {
+export async function submitAttempt(attempt_id: number,student_id:string) {
     const client = await pool.connect();
 
     try {
         await client.query("BEGIN");
 
-        // 1. Lock the attempt to prevent concurrent final submissions.
         const attemptResult = await client.query(
             `SELECT id, status
              FROM test_attempts
-             WHERE id = $1
+             WHERE id = $1 AND student_id=$2
              FOR UPDATE`,
-            [attempt_id]
+            [attempt_id,student_id]
         );
 
         if (attemptResult.rowCount === 0) {
@@ -106,7 +107,6 @@ export async function submitAttempt(attempt_id: number) {
             );
         }
 
-        // 2. Do not finalize while code is still executing.
         const runningCode = await client.query(
             `SELECT id
              FROM code_submissions
@@ -122,7 +122,6 @@ export async function submitAttempt(attempt_id: number) {
             );
         }
 
-        // 3. Grade all answered MCQ questions.
         await client.query(
             `UPDATE attempt_answers AS aa
              SET marks_awarded =
@@ -140,7 +139,6 @@ export async function submitAttempt(attempt_id: number) {
             [attempt_id]
         );
 
-        // 4. Calculate MCQ score.
         const scoreResult = await client.query(
             `SELECT COALESCE(SUM(aa.marks_awarded), 0) AS score
              FROM attempt_answers AS aa
@@ -151,7 +149,6 @@ export async function submitAttempt(attempt_id: number) {
             [attempt_id]
         );
 
-        // 5. Calculate the best score for each coding question.
         const codeScore = await client.query(
             `SELECT COALESCE(SUM(best_marks), 0) AS coding_score
              FROM (
@@ -173,7 +170,7 @@ export async function submitAttempt(attempt_id: number) {
         const codingMarks = Number(codeScore.rows[0].coding_score);
         const score = mcqMarks + codingMarks;
 
-        // 6. Save the final score and submit the attempt.
+
         const submit = await client.query(
             `UPDATE test_attempts
              SET score = $1,

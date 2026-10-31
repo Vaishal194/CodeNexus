@@ -1,25 +1,25 @@
 import { Request, Response } from "express";
 import {
     startAttempt,
-    getAttempt
+    getAttempt,
+    submitAttempt
 } from "../services/TestAttemptService.js";
-import { submitAttempt } from "../services/TestAttemptService.js";
-export async function startTestAttempt(
-    req: Request,
-    res: Response
-) {
-    const testId = Number(req.body.test_id);
-    const studentId = req.body.student_id;
 
-    if (
-        !Number.isInteger(testId) ||
-        testId <= 0 ||
-        typeof studentId !== "string" ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId)
-    ) {
+export async function startTestAttempt(req: Request, res: Response) {
+    const testId = Number(req.body.test_id);
+    const studentId = req.user?.id;
+
+    if (!Number.isInteger(testId) || testId <= 0) {
         return res.status(400).json({
             status: "Failed",
-            error: "A valid test_id and UUID student_id are required"
+            error: "A valid test_id is required"
+        });
+    }
+
+    if (!studentId) {
+        return res.status(401).json({
+            status: "Failed",
+            error: "Authentication required"
         });
     }
 
@@ -57,11 +57,9 @@ export async function startTestAttempt(
     }
 }
 
-export async function fetchTestAttempt(
-    req: Request,
-    res: Response
-) {
+export async function fetchTestAttempt(req: Request, res: Response) {
     const attemptId = Number(req.params.attemptId);
+    const studentId = req.user?.id;
 
     if (!Number.isInteger(attemptId) || attemptId <= 0) {
         return res.status(400).json({
@@ -70,8 +68,15 @@ export async function fetchTestAttempt(
         });
     }
 
+    if (!studentId) {
+        return res.status(401).json({
+            status: "Failed",
+            error: "Authentication required"
+        });
+    }
+
     try {
-        const result = await getAttempt(attemptId);
+        const result = await getAttempt(attemptId, studentId);
 
         return res.status(200).json({
             status: "Attempt fetched successfully",
@@ -94,30 +99,45 @@ export async function fetchTestAttempt(
     }
 }
 
-export async function submit(req:Request,res:Response){
-    const attemptId=Number(req.params.attemptId)
+export async function submit(req: Request, res: Response) {
+    const attemptId = Number(req.params.attemptId);
+    const studentId = req.user?.id;
 
     if (!Number.isInteger(attemptId) || attemptId <= 0) {
-    return res.status(400).json({
-        status: "Failed",
-        error: "Invalid attempt ID"
-    });
+        return res.status(400).json({
+            status: "Failed",
+            error: "Invalid attempt ID"
+        });
     }
+
+    if (!studentId) {
+        return res.status(401).json({
+            status: "Failed",
+            error: "Authentication required"
+        });
+    }
+
     try {
-        const result = await submitAttempt(attemptId);
+        const result = await submitAttempt(attemptId, studentId);
 
         return res.status(200).json({
             status: "Success",
             message: "Test submitted successfully",
             result
         });
-
     } catch (error: any) {
+        if (error.message === "Attempt not found") {
+            return res.status(404).json({
+                status: "Failed",
+                error: error.message
+            });
+        }
+
         if (
-            error.message === "Attempt not found" ||
-            error.message === "Attempt has already been submitted"
+            error.message === "Attempt has already been submitted or is not active" ||
+            error.message === "Code execution is still running. Please wait."
         ) {
-            return res.status(400).json({
+            return res.status(409).json({
                 status: "Failed",
                 error: error.message
             });

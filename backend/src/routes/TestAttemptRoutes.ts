@@ -1,4 +1,5 @@
 import express from "express";
+import {authenticate} from "../middleware/autenticate.js"
 import {
     startTestAttempt,
     fetchTestAttempt,
@@ -7,7 +8,7 @@ import {
 
 const router = express.Router();
 
-router.post("/start", startTestAttempt);
-router.get("/:attemptId", fetchTestAttempt);
-router.post("/:attemptId/submit",submit)
+router.post("/start",authenticate,startTestAttempt);
+router.get("/:attemptId", authenticate,fetchTestAttempt);
+router.post("/:attemptId/submit",authenticate,submit)
 export default router;
