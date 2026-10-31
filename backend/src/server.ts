@@ -10,6 +10,9 @@ import TestQuestionRoute from "../src/routes/TestQuestionRoute.js"
 import TestAttemptRoute from "../src/routes/TestAttemptRoutes.js"
 import AttemptAnswerRoute from "../src/routes/AttemptAnswerRoute.js"
 import CodeSubmissionRoute from "../src/routes/CodeSubmissionRoute.js"
+import TestResultRoute from "../src/routes/TestResultRoute.js"
+import { authenticate } from "./middleware/autenticate.js";
+import { requireAdmin } from "./middleware/requireAdmin.js"
 const app=express()
 const port = 5000
 app.use(cors())
@@ -28,6 +31,28 @@ app.use("/Mcq",MCQRoutes)
 app.use("/attempts", TestAttemptRoute);
 app.use("/attempt",AttemptAnswerRoute)
 app.use("/submit-code",CodeSubmissionRoute)
+app.use("/results",TestResultRoute)
+
+
+app.get("/api/auth/me", authenticate, (req, res) => {
+    res.json({
+        id: req.user!.id,
+        email: req.user!.email,
+        role: req.user!.role,
+    });
+});
+
+app.get(
+    "/api/auth/admin-check",
+    authenticate,
+    requireAdmin,
+    (req, res) => {
+        res.json({
+            message: "Admin authentication successful",
+        });
+    }
+);
+
 app.listen(port,()=>{
     console.log(`Using Port: ${port}`)
 })
