@@ -1,11 +1,12 @@
 import { Test,createTest} from "../interfaces/Contest.js";
 import {pool} from "../database.js"
+import { UpdateTest } from "../interfaces/updateTestInterface.js";
 
-export async function addTest(data:createTest){
+export async function addTest(adminId:string,data:createTest){
     const query=`
-    INSERT INTO TESTS(title,description,duration_minutes,total_marks) VALUES($1,$2,$3,$4)
+    INSERT INTO TESTS(title,description,duration_minutes,total_marks,published_by) VALUES($1,$2,$3,$4,$5)
     RETURNING *`;
-    const values=[data.title,data.description,data.duration_minutes,data.total_marks]
+    const values=[data.title,data.description,data.duration_minutes,data.total_marks,adminId]
     const result=await pool.query(query,values)
     return result.rows[0]
 }
@@ -46,6 +47,27 @@ export async function publishTest(testId:Number,adminId:string){
         testId
     ]);
 
+    if (result.rowCount === 0) {
+        throw new Error(
+            "Test not found or already published"
+        );
+    }
+
+    return result.rows[0];
+}
+
+export async function unPublishTest(testId:Number,adminId:string){
+       const query = `
+        UPDATE tests
+        SET is_published = FALSE,
+            updated_at = NOW()
+        WHERE id = $2
+          AND is_published = TRUE
+        RETURNING *;
+    `;
+    const result = await pool.query(query, [
+        testId
+    ]);
     if (result.rowCount === 0) {
         throw new Error(
             "Test not found or already published"
@@ -106,3 +128,40 @@ export async function fetchTestQuestions(testId: Number) {
 
     return result.rows;
 }
+
+export async function updateTestDetails(testId: number, data: UpdateTest) {
+    const fields = ["title", "description", "duration_minutes", "total_marks"] as const;
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    for (const field of fields) {
+        if (data[field] !== undefined) {
+            updates.push(`${field} = $${values.length + 1}`);
+            values.push(data[field]);
+        }
+    }
+
+    if (updates.length === 0) {
+        throw new Error("No fields provided for update");
+    }
+
+    values.push(testId);
+
+    const query = `
+        UPDATE tests
+        SET ${updates.join(", ")},
+            updated_at = NOW()
+        WHERE id = $${values.length}
+        RETURNING *;
+    `;
+
+    const result = await pool.query(query, values);
+
+    if (result.rowCount === 0) {
+        throw new Error("Test not found");
+    }
+
+    return result.rows[0];
+}
+

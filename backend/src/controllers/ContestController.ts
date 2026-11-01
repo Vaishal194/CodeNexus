@@ -1,13 +1,21 @@
 import express from "express"
 import { Request,Response } from "express"
 import { createTest } from "../interfaces/Contest.js"
-import { addTest, fetchAllTests, fetchTestsById, publishTest, removeTest ,published, testDetails, fetchTestQuestions} from "../services/ContestService.js"
+import { addTest, fetchAllTests, fetchTestsById, publishTest, removeTest ,published, testDetails, fetchTestQuestions, updateTestDetails, unPublishTest} from "../services/ContestService.js"
 import test from "node:test"
+import { UpdateTest } from "../interfaces/updateTestInterface.js"
 
 export async function create(req:Request,res:Response){
     const data:createTest=req.body
+    const adminId=req.user?.id
+    if(!adminId){
+        return res.status(400).json({
+            "status":"Failed",
+            "error":"Authentication Failed"
+        })
+    }
     try{
-        const result=await addTest(data)
+        const result=await addTest(adminId,data)
         res.status(201).json({
             "status":"Test Added Successfully",
             data:result
@@ -49,6 +57,34 @@ export async function publish(req:Request,res:Response){
             "status":"Failed to publish Test",
             "error":error.message
         })
+    }
+}
+
+export async function unPublish(req:Request,res:Response){
+    const testId=Number(req.params.testId)
+    const adminId=req.user?.id
+    if(!adminId){
+        return res.status(401).json({
+            "status":"Failed",
+            "error":"Authentication Failed "
+        })
+    }
+    if(!Number.isInteger(testId) || testId<=0)
+        return res.status(500).json({
+         "status":"Failed",
+         "error":"Invalid Test ID"
+    })
+
+    try{
+          const result=await unPublishTest(testId,adminId)
+          return res.status(200).json({
+            result
+          })
+    }catch(error:any){
+         return res.status(500).json({
+            "status":"Failed",
+            "error":error.message
+         })
     }
 }
 
@@ -130,3 +166,24 @@ export async function fetchTestQuestion(req:Request,res:Response){
     }
 }
 
+export async function updateTest(req:Request,res:Response){
+    const testId=Number(req.params.testId)
+    const data:UpdateTest=req.body
+    if(!Number.isInteger(testId) || testId<=0)
+        return res.status(500).json({
+         "status":"Failed",
+         "error":"Invalid TestId"
+    })
+
+    try{
+        const result=await updateTestDetails(testId,data)
+        return res.status(200).json({
+            result
+        })
+    }catch(error:any){
+        return res.status(500).json({
+            "status":"Failed",
+            "error":"Internal Server Error"+error.message
+        })
+    }
+}

@@ -46,7 +46,6 @@ export async function PythonRunner(
             );
         }
 
-        // Check syntax first, then execute every test case.
         const commands = [
             'python3 -c "import ast; ast.parse(open(\'/src/main.py\').read())" 2>/results/compile_error.txt || exit 20',
             ...testCases.map((_, i) =>

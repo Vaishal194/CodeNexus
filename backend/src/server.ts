@@ -13,6 +13,7 @@ import CodeSubmissionRoute from "../src/routes/CodeSubmissionRoute.js"
 import TestResultRoute from "../src/routes/TestResultRoute.js"
 import { authenticate } from "./middleware/autenticate.js";
 import { requireAdmin } from "./middleware/requireAdmin.js"
+import AdminRoute from "../src/routes/AdminRoute.js"
 const app=express()
 const port = 5000
 app.use(cors())
@@ -21,8 +22,8 @@ app.use(express.json())
 app.get("/",(req:Request,res:Response)=>{
     res.send("Backend Running Properly")
 })
-
-app.use("/api",ExecutionRoute)
+app.use("/api/admin",AdminRoute)
+app.use("/execute",ExecutionRoute)
 app.use("/prob",ProblemRoutes)
 app.use("/testcase",TestCaseRoute)
 app.use("/contest",ContestRoute)
