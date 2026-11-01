@@ -4,7 +4,7 @@ import { UpdateTest } from "../interfaces/updateTestInterface.js";
 
 export async function addTest(adminId:string,data:createTest){
     const query=`
-    INSERT INTO TESTS(title,description,duration_minutes,total_marks,published_by) VALUES($1,$2,$3,$4,$5)
+    INSERT INTO TESTS(title,description,duration_minutes,total_marks,created_by) VALUES($1,$2,$3,$4,$5)
     RETURNING *`;
     const values=[data.title,data.description,data.duration_minutes,data.total_marks,adminId]
     const result=await pool.query(query,values)
@@ -61,7 +61,7 @@ export async function unPublishTest(testId:Number,adminId:string){
         UPDATE tests
         SET is_published = FALSE,
             updated_at = NOW()
-        WHERE id = $2
+        WHERE id = $1
           AND is_published = TRUE
         RETURNING *;
     `;

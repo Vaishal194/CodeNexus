@@ -45,7 +45,21 @@ export async function remove(req:Request,res:Response){
 }
 
 export async function publish(req:Request,res:Response){
-    const {testId,adminId}=req.body
+    const testId=Number(req.params.testId)
+    const adminId=req.user?.id
+
+    if(!Number.isInteger(testId) || testId<=0)
+        return res.status(500).json({
+    "status":"Failed",
+    "error":"Invalid Test ID"
+    })
+
+    if(!adminId){
+         return res.status(400).json({
+    "status":"Failed",
+    "error":"Authentication Failed"
+    })
+    }
     try{
         const result=await publishTest(testId,adminId)
         res.status(201).json({
