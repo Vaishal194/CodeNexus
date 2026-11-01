@@ -6,6 +6,13 @@ export async function submit(req:Request,res:Response){
     const {attemptId,testQuestionId,language,code}=req.body
     const parsedAttemptId=Number(attemptId)
     const parsedtqId=Number(testQuestionId)
+    const studentId=req.user?.id
+    if(!studentId){
+        return res.status(201).json({
+            "status":"Failed",
+            "error":"Authentication Failed"}
+        )
+    }
      if (
         !Number.isInteger(parsedAttemptId) ||
         parsedAttemptId <= 0 ||
@@ -22,7 +29,7 @@ export async function submit(req:Request,res:Response){
         });
     }
     try{
-        const result=await submitCode(attemptId,testQuestionId,language,code)
+        const result=await submitCode(attemptId,testQuestionId,language,code,studentId)
         res.status(200).json({
             status: "Code submitted successfully",
             result:result

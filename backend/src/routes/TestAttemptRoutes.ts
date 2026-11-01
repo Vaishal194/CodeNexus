@@ -3,7 +3,8 @@ import {authenticate} from "../middleware/autenticate.js"
 import {
     startTestAttempt,
     fetchTestAttempt,
-    submit
+    submit,
+    fetchResults
 } from "../controllers/TestAttemptController.js";
 
 const router = express.Router();
@@ -11,4 +12,5 @@ const router = express.Router();
 router.post("/start",authenticate,startTestAttempt);
 router.get("/:attemptId", authenticate,fetchTestAttempt);
 router.post("/:attemptId/submit",authenticate,submit)
+router.get("/:attemptId/result",authenticate,fetchResults)
 export default router;

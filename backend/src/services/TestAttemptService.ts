@@ -197,3 +197,104 @@ export async function submitAttempt(attempt_id: number,student_id:string) {
         client.release();
     }
 }
+
+export async function fetchResultById(
+    attempt_id: number,
+    student_id: string
+) {
+    const attempt_result = await pool.query(
+        `SELECT
+            id AS attempt_id,
+            test_id,
+            student_id,
+            started_at,
+            submitted_at,
+            status,
+            total_marks,
+            score
+         FROM test_attempts
+         WHERE id = $1
+           AND student_id = $2`,
+        [attempt_id, student_id]
+    );
+
+    if (attempt_result.rowCount === 0) {
+        throw new Error("Attempt not found");
+    }
+
+    const attempt = attempt_result.rows[0];
+
+    if (attempt.status !== "SUBMITTED") {
+        throw new Error("Attempt has not been submitted yet");
+    }
+
+    const coding_result = await pool.query(
+        `SELECT
+            tq.id AS test_question_id,
+            tq.problem_id,
+            tq.marks AS maximum_marks,
+            p.title AS problem_title,
+            cs.id AS submission_id,
+            cs.language,
+            cs.source_code,
+            cs.status,
+            cs.passed_test_cases,
+            cs.total_test_cases,
+            cs.marks_awarded,
+            cs.submitted_at
+        FROM test_attempts AS ta
+        JOIN test_questions AS tq
+            ON tq.test_id = ta.test_id
+        LEFT JOIN problems AS p
+            ON p.id = tq.problem_id
+        LEFT JOIN LATERAL (
+            SELECT *
+            FROM code_submissions AS cs
+            WHERE cs.attempt_id = ta.id
+              AND cs.test_question_id = tq.id
+            ORDER BY cs.submitted_at DESC, cs.id DESC
+            LIMIT 1
+        ) AS cs ON TRUE
+        WHERE ta.id = $1
+          AND ta.student_id = $2
+          AND LOWER(tq.question_type) = 'coding'
+        ORDER BY tq.sequence_number`,
+        [attempt_id, student_id]
+    );
+
+    const mcq_results = await pool.query(
+        `SELECT
+            tq.id AS test_question_id,
+            mcq.id AS mcq_id,
+            mcq.question,
+            mcq.options,
+            aa.selected_option,
+            mcq.correct_option,
+            CASE
+                WHEN aa.selected_option IS NULL THEN FALSE
+                ELSE aa.selected_option = mcq.correct_option
+            END AS is_correct,
+            tq.marks AS maximum_marks,
+            COALESCE(aa.marks_awarded, 0) AS marks_awarded,
+            aa.submitted_at
+        FROM test_attempts AS ta
+        JOIN test_questions AS tq
+            ON tq.test_id = ta.test_id
+        JOIN mcq_questions AS mcq
+            ON mcq.id = tq.mcq_id
+        LEFT JOIN attempt_answers AS aa
+            ON aa.attempt_id = ta.id
+           AND aa.test_question_id = tq.id
+        WHERE ta.id = $1
+          AND ta.student_id = $2
+          AND LOWER(tq.question_type) = 'mcq'
+        ORDER BY tq.sequence_number`,
+        [attempt_id, student_id]
+    );
+
+    return {
+        attempt,
+        mcq_results: mcq_results.rows,
+        coding_results: coding_result.rows
+    };
+}

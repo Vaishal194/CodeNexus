@@ -2,16 +2,23 @@ import { Request, Response } from "express";
 import { saveMCQAnswer } from "../services/AttemptAnswerService.js";
 
 export async function saveAnswer(req: Request, res: Response) {
-    const attemptId = Number(req.params.attemptId);
-    const { test_question_id, selected_option } = req.body;
-
+    const attemptId = Number(req.body.attemptId);
+    const testQuestionId=Number(req.body.testQuestionId);
+    const selectedOption = Number(req.body.selectedOption);
+    const studentId=req.user?.id
+    if(!studentId){
+        return res.status(201).json({
+            "status":"Failed",
+            "error":"Authentication Required"
+        })
+    }
     if (
         !Number.isInteger(attemptId) ||
         attemptId <= 0 ||
-        !Number.isInteger(test_question_id) ||
-        test_question_id <= 0 ||
-        !Number.isInteger(selected_option) ||
-        selected_option < 0
+        !Number.isInteger(testQuestionId) ||
+        testQuestionId <= 0 ||
+        !Number.isInteger(selectedOption) ||
+        selectedOption < 0
     ) {
         return res.status(400).json({
             status: "Failed",
@@ -22,8 +29,8 @@ export async function saveAnswer(req: Request, res: Response) {
     try {
         const result = await saveMCQAnswer(
             attemptId,
-            test_question_id,
-            selected_option
+           testQuestionId,
+            selectedOption,studentId
         );
 
         return res.status(200).json({

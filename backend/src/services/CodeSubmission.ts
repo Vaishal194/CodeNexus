@@ -35,14 +35,14 @@ export async function submitCode(
     attemptId: number,
     testQuestionId: number,
     language: string,
-    code: string
+    code: string,
+    studentId:string
 ) {
     let submissionId: number | string;
 
     let problemId: number;
     let questionMarks: number;
 
-    // 1. Lock the attempt and create the submission atomically.
     const client = await pool.connect();
 
     try {
@@ -59,10 +59,11 @@ export async function submitCode(
              JOIN test_questions AS tq
                ON tq.test_id = ta.test_id
              WHERE ta.id = $1
-               AND tq.id = $2
+               AND ta.student_id=$2
+               AND tq.id = $3
                AND LOWER(tq.question_type) = 'coding'
              FOR UPDATE OF ta`,
-            [attemptId, testQuestionId]
+            [attemptId,studentId, testQuestionId]
         );
 
         if (validation.rowCount === 0) {

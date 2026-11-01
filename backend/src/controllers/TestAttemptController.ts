@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import {
     startAttempt,
     getAttempt,
-    submitAttempt
+    submitAttempt,
+    fetchResultById
 } from "../services/TestAttemptService.js";
 
 export async function startTestAttempt(req: Request, res: Response) {
@@ -148,6 +149,34 @@ export async function submit(req: Request, res: Response) {
         return res.status(500).json({
             status: "Failed",
             error: "Internal server error"
+        });
+    }
+}
+export async function fetchResults(req:Request,res:Response){
+    const attempt_id=Number(req.params.attemptId)
+    const studentId=req.user?.id
+    if(!studentId){
+        return res.status(201).json(
+            {
+                "status":"Failed",
+                "error":"Authentication Failed"
+            }
+        )
+    }
+    if(!Number.isInteger(attempt_id) || attempt_id<=0)
+        return res.status(201).json({
+                "status":"Failed",
+                "error":"Invalid Attempt ID"
+    })
+    try{ 
+        const result=await fetchResultById(attempt_id,studentId)
+        return res.status(200).json({
+            result
+        })
+    }catch(error:any){
+        return res.status(500).json({
+            status: "Failed",
+            error: "Internal server error"+error.message
         });
     }
 }

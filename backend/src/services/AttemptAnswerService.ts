@@ -3,7 +3,8 @@ import { pool } from "../database.js";
 export async function saveMCQAnswer(
     attemptId: number,
     testQuestionId: number,
-    selectedOption: number
+    selectedOption: number,
+    studentId:string
 ) {
     const client = await pool.connect();
 
@@ -13,10 +14,10 @@ export async function saveMCQAnswer(
         const attempt = await client.query(
             `SELECT id, test_id
              FROM test_attempts
-             WHERE id = $1
+             WHERE id = $1 AND student_id=$2
                AND status = 'IN_PROGRESS'
              FOR UPDATE`,
-            [attemptId]
+            [attemptId,studentId]
         );
 
         if (attempt.rowCount === 0) {
@@ -44,12 +45,10 @@ export async function saveMCQAnswer(
             throw new Error("MCQ question not found in this test");
         }
 
-        if (question.rowCount === 0) {
-            throw new Error("MCQ question not found in this test");
-        }
-
         const options = question.rows[0].options;
-
+        if (!Array.isArray(options)) {
+            throw new Error("Invalid MCQ options configuration");
+        }
         if (
             !Number.isInteger(selectedOption) ||
             selectedOption < 0 ||
