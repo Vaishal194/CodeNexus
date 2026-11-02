@@ -3,12 +3,21 @@ import {generateProblem,getProblemById, getProblemsList} from "../services/Probl
 import { createProblem } from "../interfaces/createProblems.js";
 import { getProblemId } from "../interfaces/getProblemId.js";
 import { getProblemList } from "../interfaces/geProblemsList.js";
+import { error } from "node:console";
+
 export async function postProblem(req: Request, res: Response) {
+    const adminId=req.user?.id
+    if(!adminId){
+        return res.status(400).json({
+            "status":"Failed",
+            "error":"Authorization Failed"
+        })
+    }
     try {
         console.log("Request body:", req.body);
         const data: createProblem = req.body
         console.log("Difficulty: ", data.difficulty)
-        const problem = await generateProblem(req.body);
+        const problem = await generateProblem(data,adminId);
 
         return res.status(201).json({
             message: "Problem created successfully",

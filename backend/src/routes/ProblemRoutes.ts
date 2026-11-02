@@ -2,7 +2,7 @@ import { postProblem ,getProblem, fetchProblemList} from "../controllers/Problem
 import express from "express"
 
 const router=express.Router()
-router.post("/problems/create",postProblem)
+// router.post("/problems/create",postProblem)
 router.get("/problems/:id",getProblem)
 router.get("/problems",fetchProblemList)
 export default router

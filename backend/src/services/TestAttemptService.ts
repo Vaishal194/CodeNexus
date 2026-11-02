@@ -252,7 +252,7 @@ export async function fetchResultById(
             FROM code_submissions AS cs
             WHERE cs.attempt_id = ta.id
               AND cs.test_question_id = tq.id
-            ORDER BY cs.submitted_at DESC, cs.id DESC
+            ORDER BY cs.marks_awarded DESC, cs.id DESC
             LIMIT 1
         ) AS cs ON TRUE
         WHERE ta.id = $1

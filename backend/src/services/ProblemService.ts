@@ -2,7 +2,7 @@ import { createProblem } from "../interfaces/createProblems.js";
 import {pool} from "../database.js"
 import { getProblemId } from "../interfaces/getProblemId.js";
 import { getProblemList } from "../interfaces/geProblemsList.js";
-export async function generateProblem(data:createProblem){
+export async function generateProblem(data:createProblem,adminId:string){
     const query=`
         INSERT INTO PROBLEMS(
         title,description,difficulty,supported_languages,input_format,output_format,constraints

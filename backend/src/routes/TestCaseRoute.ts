@@ -4,8 +4,8 @@ import { addCase, getAllTestCasesById, getHiddenCasesById, getTestCasesById, rem
 import { getTestCases } from "../services/TestCasesService.js";
 
 const router=express.Router()
-router.post("/add",addCase)
-router.get("/remove/:id",removeCase)
+// router.post("/add",addCase)
+// router.get("/remove/:id",removeCase)
 router.get("/hidden/:id",getHiddenCasesById)
 router.get("/:id",getTestCasesById)
 router.get("/all/:id",getAllTestCasesById)
