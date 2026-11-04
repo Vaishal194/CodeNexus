@@ -8,7 +8,7 @@ export async function submit(req:Request,res:Response){
     const parsedtqId=Number(testQuestionId)
     const studentId=req.user?.id
     if(!studentId){
-        return res.status(201).json({
+        return res.status(401).json({
             "status":"Failed",
             "error":"Authentication Failed"}
         )

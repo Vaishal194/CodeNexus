@@ -156,7 +156,7 @@ export async function fetchResults(req:Request,res:Response){
     const attempt_id=Number(req.params.attemptId)
     const studentId=req.user?.id
     if(!studentId){
-        return res.status(201).json(
+        return res.status(401).json(
             {
                 "status":"Failed",
                 "error":"Authentication Failed"
@@ -164,7 +164,7 @@ export async function fetchResults(req:Request,res:Response){
         )
     }
     if(!Number.isInteger(attempt_id) || attempt_id<=0)
-        return res.status(201).json({
+        return res.status(500).json({
                 "status":"Failed",
                 "error":"Invalid Attempt ID"
     })

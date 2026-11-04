@@ -2,12 +2,12 @@ import { Request, Response } from "express";
 import { saveMCQAnswer } from "../services/AttemptAnswerService.js";
 
 export async function saveAnswer(req: Request, res: Response) {
-    const attemptId = Number(req.body.attemptId);
+    const attemptId = Number(req.params.attemptId);
     const testQuestionId=Number(req.body.testQuestionId);
     const selectedOption = Number(req.body.selectedOption);
     const studentId=req.user?.id
     if(!studentId){
-        return res.status(201).json({
+        return res.status(401).json({
             "status":"Failed",
             "error":"Authentication Required"
         })

@@ -23,7 +23,7 @@ app.get("/",(req:Request,res:Response)=>{
     res.send("Backend Running Properly")
 })
 app.use("/api/admin",AdminRoute)
-app.use("/execute",ExecutionRoute)
+app.use("/execute-code",ExecutionRoute)
 app.use("/prob",ProblemRoutes)
 app.use("/testcase",TestCaseRoute)
 app.use("/contest",ContestRoute)

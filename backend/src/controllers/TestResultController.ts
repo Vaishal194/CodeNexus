@@ -3,6 +3,13 @@ import type { Request, Response } from "express";
 import { getAttemptResult } from "../services/TestResultService.js";
 
 export async function getResult(req: Request, res: Response) {
+    const student_id=req.user?.id
+    if(!student_id){
+        return res.status(400).json({
+            "status":"Failed",
+            "error":"Authentication Failed!"
+        })
+    }
     try {
         const attemptId = Number(req.params.attemptId);
 
@@ -13,7 +20,7 @@ export async function getResult(req: Request, res: Response) {
             });
         }
 
-        const result = await getAttemptResult(attemptId);
+        const result = await getAttemptResult(attemptId,student_id);
 
         return res.status(200).json({
             status: "success",

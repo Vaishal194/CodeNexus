@@ -4,7 +4,8 @@ import { requireAdmin } from "../middleware/requireAdmin.js"
 import { updateTest,create ,remove,publish,fetchAll,fetchById,PublishedTests,fetchTestDetails,fetchTestQuestion, unPublish} from "../controllers/ContestController.js"
 import { fecthAttemptsByTestId, fetchDetailedResultByAttemptId, fetchResultByAttemptId } from "../controllers/TestAttemptAdminController.js"
 import {addCase,getAllTestCasesById,getHiddenCasesById,getTestCasesById,removeCase} from "../controllers/TestCaseController.js"
-import { postProblem } from "../controllers/ProblemController.js"
+import { deleteProblemById, postProblem, updateProblemById } from "../controllers/ProblemController.js"
+import { getResult } from "../controllers/TestResultController.js"
 const router=express.Router()
 
 router.use(authenticate,requireAdmin)
@@ -21,6 +22,7 @@ router.put("/:testId/unpublish",unPublish)
 router.get("/:testId/attempts",fecthAttemptsByTestId)
 router.get("/:attempt_id/result",fetchResultByAttemptId)
 router.get("/:attemptId/detailedResult",fetchDetailedResultByAttemptId)
+router.get("/:attemptId/result",getResult)
 
 //Test Case routes
 router.post("/test-case/add",addCase)
@@ -31,4 +33,6 @@ router.get("/all/:id",getAllTestCasesById)
 
 //Post Problems
 router.post("/problems/create",postProblem)
+router.delete("/problems/:problem_id/delete",deleteProblemById)
+router.put("/problems/:problemId/update",updateProblemById)
 export default router

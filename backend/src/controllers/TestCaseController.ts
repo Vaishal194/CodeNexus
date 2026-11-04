@@ -8,6 +8,7 @@ export async function addCase(req:Request,res:Response){
         const result=await addTestCase(data)
         res.status(201).json({
             "status":"Successfully Added a Test Case"
+            ,result
         })
     }catch(error:any){
         res.status(500).json({
@@ -23,6 +24,7 @@ export async function removeCase(req:Request,res:Response){
         const result=await removeTestCase(id)
         res.status(201).json({
             "status":`Successfully Removed Test Case: ${id}`
+            ,result
         })
 
     }catch(error:any){
@@ -37,7 +39,7 @@ export async function getHiddenCasesById(req:Request,res:Response){
     const id=Number(req.params.id)
     try{
         const result=await getHiddenCases(id)
-        return res.status(201).send(result)
+        return res.status(201).json({result})
 
     }catch(error:any){
         res.status(500).json({
@@ -50,7 +52,9 @@ export async function getTestCasesById(req:Request,res:Response){
     const id=Number(req.params.id)
     try{
         const result=await getTestCases(id)
-        return res.status(201).send(result)
+        return res.status(201).json({
+            result
+        })
 
     }catch(error:any){
         res.status(500).json({
@@ -63,7 +67,7 @@ export async function getAllTestCasesById(req:Request,res:Response){
     const problem_id=Number(req.params.id)
     try{
         const result=await generateAllTestCases(problem_id)
-        return res.status(201).send(result)
+        return res.status(201).json({result})
 
     }catch(error:any){
         res.status(500).json({

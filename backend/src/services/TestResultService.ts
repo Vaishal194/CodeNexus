@@ -1,7 +1,7 @@
 
 import { pool } from "../database.js";
 
-export async function getAttemptResult(attemptId: number) {
+export async function getAttemptResult(attemptId: number,student_id:string) {
     const attemptResult = await pool.query(
         `SELECT
             ta.id AS attempt_id,
@@ -20,8 +20,9 @@ export async function getAttemptResult(attemptId: number) {
             END AS percentage
         FROM test_attempts ta
         JOIN tests t ON t.id = ta.test_id
-        WHERE ta.id = $1`,
-        [attemptId]
+        WHERE ta.id = $1
+        AND ta.student_id=$2`,
+        [attemptId,student_id]
     );
 
     if (attemptResult.rowCount === 0) {

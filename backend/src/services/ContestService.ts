@@ -19,13 +19,13 @@ export async function removeTest(test_id:Number){
 }
 
 export async function fetchAllTests(){
-    const query=`SELECT title,description,duration_minutes,total_marks FROM TESTS`
+    const query=`SELECT id,title,description,duration_minutes,total_marks FROM TESTS`
     const result=await pool.query(query,[])
     return result.rows
 }
 
 export async function fetchTestsById(id:Number){
-    const query=`SELECT title,description,duration_minutes,total_marks FROM TESTS WHERE ID=$1`
+    const query=`SELECT id,title,description,duration_minutes,total_marks FROM TESTS WHERE ID=$1`
     const result=await pool.query(query,[id])
     return result.rows
 }
