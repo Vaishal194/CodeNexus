@@ -61,7 +61,10 @@ export async function submitCode(req: Request, res: Response) {
     }
 
     try {
-        const result = await runCode(
+        // Submit must evaluate the full suite (hidden + non-hidden).
+        // Per-case details stay server-side because executeCode defaults to
+        // summary-only results for submission paths.
+        const result = await ExecutionService(
             Number(problem_id),
             language,
             code
@@ -70,7 +73,9 @@ export async function submitCode(req: Request, res: Response) {
 
         const status = parsed_res.status;
 
-        const parsed_output = JSON.parse(parsed_res.output);
+        const parsed_output = parsed_res.output
+            ? JSON.parse(parsed_res.output)
+            : { passed: 0, total: 0 };
 
         const passed = parsed_output.passed;
         const total = parsed_output.total;

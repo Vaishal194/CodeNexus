@@ -2,12 +2,14 @@ import { CppRunner } from "../runners/CppRunner.js";
 import JavaRunner from "../runners/javaRunner.js";
 import PythonRunner from "../runners/pythonRunner.js";
 import { generateAllTestCases, generateNonHiddenTestCases } from "./TestCasesService.js";
+import { RunnerOptions } from "../interfaces/JudgeResult.js";
 import {pool} from "../database.js"
 
 export default async function executeCode(
     problemId: number,
     lang: string,
-    code: string
+    code: string,
+    options: RunnerOptions = {}
 ) {
     const testCases = await generateAllTestCases(problemId);
 
@@ -24,15 +26,15 @@ export default async function executeCode(
     const language = lang.toLowerCase();
 
     if (language === "cpp" || language === "c++") {
-        return CppRunner(code, cases);
+        return CppRunner(code, cases, options);
     }
 
     if (language === "python" || language === "py") {
-        return PythonRunner(code, cases);
+        return PythonRunner(code, cases, options);
     }
 
     if (language === "java") {
-        return JavaRunner(code, cases);
+        return JavaRunner(code, cases, options);
     }
 
     throw new Error(`Unsupported language: ${lang}`);
@@ -51,15 +53,15 @@ export async function runCode(problem_id: number,
     const language = lang.toLowerCase();
 
     if (language === "cpp" || language === "c++") {
-        return CppRunner(code, cases);
+        return CppRunner(code, cases, { includeTestCaseDetails: true });
     }
 
     if (language === "python" || language === "py") {
-        return PythonRunner(code, cases);
+        return PythonRunner(code, cases, { includeTestCaseDetails: true });
     }
 
     if (language === "java") {
-        return JavaRunner(code, cases);
+        return JavaRunner(code, cases, { includeTestCaseDetails: true });
     }
 
     throw new Error(`Unsupported language: ${lang}`);

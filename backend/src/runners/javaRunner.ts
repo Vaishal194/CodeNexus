@@ -6,6 +6,7 @@ import { tmpdir } from "os";
 import path from "path";
 import { randomUUID } from "crypto";
 import { ExecutionResult } from "../interfaces/ExecutionResult.js";
+import { JudgeCaseResult, RunnerOptions } from "../interfaces/JudgeResult.js";
 
 const execPromise = promisify(execFile);
 const IMAGE = "prepverse-java";
@@ -18,7 +19,8 @@ interface JudgeCase {
 
 export async function JavaRunner(
     code: string,
-    testCases: JudgeCase[]
+    testCases: JudgeCase[],
+    options: RunnerOptions = {}
 ): Promise<ExecutionResult> {
     if (testCases.length === 0) {
         return {
@@ -108,14 +110,16 @@ export async function JavaRunner(
             };
         }
 
-        const results: {
-            testCase: number;
-            status: string;
-        }[] = [];
+        const results: JudgeCaseResult[] = [];
 
         for (let i = 0; i < testCases.length; i++) {
             const actual = await readFile(
                 path.join(resultDir, `output-${i}.txt`),
+                "utf8"
+            ).catch(() => "");
+
+            const errorOutput = await readFile(
+                path.join(resultDir, `error-${i}.txt`),
                 "utf8"
             ).catch(() => "");
 
@@ -126,29 +130,37 @@ export async function JavaRunner(
                 ).catch(() => "-1")
             );
 
+            let status: JudgeCaseResult["status"];
+
             if (exitCode === 124) {
-                results.push({
-                    testCase: i + 1,
-                    status: "Time Limit Exceeded"
-                });
+                status = "Time Limit Exceeded";
             } else if (exitCode !== 0) {
-                results.push({
-                    testCase: i + 1,
-                    status: "Runtime Error"
-                });
+                status = "Runtime Error";
             } else if (
                 actual.trim() === testCases[i].expected_output.trim()
             ) {
-                results.push({
-                    testCase: i + 1,
-                    status: "Passed"
-                });
+                status = "Passed";
             } else {
-                results.push({
-                    testCase: i + 1,
-                    status: "Failed"
-                });
+                status = "Failed";
             }
+
+            const caseResult: JudgeCaseResult = {
+                testCase: i + 1,
+                status,
+                passed: status === "Passed"
+            };
+
+            if (options.includeTestCaseDetails && !testCases[i].is_hidden) {
+                caseResult.input = testCases[i].input;
+                caseResult.expected_output = testCases[i].expected_output;
+                caseResult.actual_output = actual;
+
+                if (errorOutput.trim()) {
+                    caseResult.error = errorOutput.trim();
+                }
+            }
+
+            results.push(caseResult);
         }
 
         const passed = results.filter(

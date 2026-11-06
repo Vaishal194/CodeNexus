@@ -49,7 +49,7 @@ export async function fetchAllQuestions(req:Request,res:Response){
 }
 
 export async function fetchTestQuestionById(req:Request,res:Response){
-    const id:Number=Number(req.params.body)
+    const id: number = Number(req.params.id)
     try{
         const result=await fetchById(id)
         res.status(200).json({
