@@ -1,9 +1,11 @@
 import express from "express"
 import { Request,Response } from "express"
 import { createTest } from "../interfaces/Contest.js"
-import { addTest, fetchAllTests, fetchTestsById, publishTest, removeTest ,published, testDetails, fetchTestQuestions, updateTestDetails, unPublishTest} from "../services/ContestService.js"
+import { addTest, fetchAllTests, fetchTestsById, publishTest, removeTest ,published, testDetails, fetchTestQuestions, updateTestDetails, unPublishTest, addCodingQuestion, deleteCodingQuestion} from "../services/ContestService.js"
 import test from "node:test"
 import { UpdateTest } from "../interfaces/updateTestInterface.js"
+import { error } from "node:console"
+import { codingContest } from "../interfaces/createCodingProblemContest.js"
 
 export async function create(req:Request,res:Response){
     const data:createTest=req.body
@@ -198,6 +200,55 @@ export async function updateTest(req:Request,res:Response){
         return res.status(500).json({
             "status":"Failed",
             "error":"Internal Server Error"+error.message
+        })
+    }
+}
+
+export async function addQuestion(req:Request,res:Response){
+    const test_id=Number(req.params.test_id)
+    if(!Number(test_id) || test_id<=0){
+        return res.status(500).json({
+            "status":"Failed",
+            "error":"Invalid Test ID"
+        })
+    }
+    const data:codingContest=req.body
+    try{
+        const result=await addCodingQuestion(data,test_id)
+        return res.status(200).json({
+            result
+        })
+    }catch(error:any){
+        return res.status(500).json({
+            "status":"Failed",
+            "error":"Failed to Add Question "+error.message
+        })
+    }
+}
+
+export async function deleteQuestion(req:Request,res:Response){
+    const problem_id=Number(req.params.problem_id)
+    const test_id=Number(req.params.test_id)
+    if(!Number(problem_id) || problem_id<=0)
+        return res.status(500).json({
+            "status":"Failed",
+            "error":"Invalid Problem ID"
+    })
+    if(!Number(test_id) || test_id<=0)
+        return res.status(500).json({
+            "status":"Failed",
+            "error":"Invalid Test ID"
+    })
+    try{
+        const result=await deleteCodingQuestion(problem_id,test_id)
+        return res.status(200).json({
+            result
+        })
+    }catch(error:any){
+        console.log(error.message)
+        return res.status(500).json({
+            "status":"Error",
+            "error":"Failed to Delete"+error.message
         })
     }
 }

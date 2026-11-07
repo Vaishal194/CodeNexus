@@ -1,6 +1,7 @@
 import { Test,createTest} from "../interfaces/Contest.js";
 import {pool} from "../database.js"
 import { UpdateTest } from "../interfaces/updateTestInterface.js";
+import { codingContest } from "../interfaces/createCodingProblemContest.js";
 
 export async function addTest(adminId:string,data:createTest){
     const query=`
@@ -165,3 +166,67 @@ export async function updateTestDetails(testId: number, data: UpdateTest) {
     return result.rows[0];
 }
 
+export async function addCodingQuestion(data:codingContest,test_id:number){
+    const client=await pool.connect()
+    try{
+        
+        await client.query("BEGIN")
+        const query=`INSERT INTO PROBLEMS(
+        title,description,difficulty,supported_languages,input_format,output_format,constraints,source_test_id
+        )VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,description difficulty`
+
+        const values=[data.title,data.description,data.difficulty,data.supported_languages,data.input,data.output,
+        data.constraints,test_id
+    ]
+
+
+    const result=await client.query(query,values)
+    const problemID=result.rows[0].id
+
+    const sequenceResult = await client.query(
+            `SELECT COALESCE(MAX(sequence_number), 0) + 1 AS next_sequence
+             FROM test_questions
+             WHERE test_id = $1`,
+            [test_id]
+        );
+    const sequence_number = sequenceResult.rows[0].next_sequence;
+    
+    const questionQuery = `
+            INSERT INTO test_questions (
+                test_id,
+                question_type,
+                problem_id,
+                marks,
+                sequence_number
+            )
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+        `;
+
+        const questionResult = await client.query(questionQuery, [
+            test_id,
+            "coding",
+            problemID,
+            1,
+            sequence_number
+        ]);
+        await client.query("COMMIT");
+         return {
+            problem: result.rows[0],
+            test_question: questionResult.rows[0]
+        };
+    }catch(error:any){
+        await client.query("ROLLBACK")
+        throw error
+    }
+    finally {
+        client.release();
+    }
+}
+
+export async function deleteCodingQuestion(problem_id:number,test_id:number){
+    const query=`DELETE FROM PROBLEMS WHERE id=$1 AND source_test_id=$2`
+    const values=[problem_id,test_id]
+    const result=await pool.query(query,values)
+    return result.rows
+}

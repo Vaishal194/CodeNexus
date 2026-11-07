@@ -14,6 +14,7 @@ import TestResultRoute from "../src/routes/TestResultRoute.js"
 import { authenticate } from "./middleware/autenticate.js";
 import { requireAdmin } from "./middleware/requireAdmin.js"
 import AdminRoute from "../src/routes/AdminRoute.js"
+import CustomTestRoute from "../src/routes/CustomTestRoute.js"
 const app=express()
 const port = 5000
 app.use(cors())
@@ -33,7 +34,7 @@ app.use("/attempts", TestAttemptRoute);
 app.use("/attempt",AttemptAnswerRoute)
 app.use("/submit-code",CodeSubmissionRoute)
 app.use("/results",TestResultRoute)
-
+app.use("/custom",CustomTestRoute)
 
 app.get("/api/auth/me", authenticate, (req, res) => {
     res.json({

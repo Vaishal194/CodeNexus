@@ -1,7 +1,7 @@
 import express from "express"
 import { authenticate } from "../middleware/autenticate.js"
 import { requireAdmin } from "../middleware/requireAdmin.js"
-import { updateTest,create ,remove,publish,fetchAll,fetchById,PublishedTests,fetchTestDetails,fetchTestQuestion, unPublish} from "../controllers/ContestController.js"
+import { updateTest,create ,remove,publish,fetchAll,fetchById,PublishedTests,fetchTestDetails,fetchTestQuestion, unPublish, addQuestion, deleteQuestion} from "../controllers/ContestController.js"
 import { fecthAttemptsByTestId, fetchDetailedResultByAttemptId, fetchResultByAttemptId } from "../controllers/TestAttemptAdminController.js"
 import {addCase,getAllTestCasesById,getHiddenCasesById,getTestCasesById,removeCase} from "../controllers/TestCaseController.js"
 import { deleteProblemById, postProblem, updateProblemById } from "../controllers/ProblemController.js"
@@ -35,4 +35,8 @@ router.get("/all/:id",getAllTestCasesById)
 router.post("/problems/create",postProblem)
 router.delete("/problems/:problem_id/delete",deleteProblemById)
 router.put("/problems/:problemId/update",updateProblemById)
+
+//contest Coding question add/delete routes
+router.post("/contest/add/:test_id",addQuestion)
+router.delete("/contest/delete/:problem_id/:test_id",deleteQuestion)
 export default router

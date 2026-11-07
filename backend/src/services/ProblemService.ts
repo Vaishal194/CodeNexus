@@ -25,7 +25,7 @@ export async function getProblemById(id:number):Promise<getProblemId>{
 }
 
 export async function getProblemsList():Promise<getProblemList[]>{
-    const query=`SELECT id,title,difficulty FROM PROBLEMS`
+    const query=`SELECT id,title,difficulty FROM PROBLEMS WHERE source_test_id is null`
     const result=await pool.query(query,[])
     return result.rows
 }
