@@ -2,7 +2,8 @@ import { pool } from "../database.js";
 
 export async function startAttempt(
     testId: number,
-    studentId: string
+    studentId: string,
+    joinCode?: string
 ) {
     const client = await pool.connect();
 
@@ -10,7 +11,7 @@ export async function startAttempt(
         await client.query("BEGIN");
 
         const test = await client.query(
-            `SELECT id
+            `SELECT id, created_by, test_type, visibility, join_code
              FROM tests
              WHERE id = $1
                AND is_published = TRUE
@@ -20,6 +21,26 @@ export async function startAttempt(
 
         if (test.rowCount === 0) {
             throw new Error("Test not found or not published");
+        }
+
+        const testRow = test.rows[0];
+
+        if (testRow.created_by && testRow.created_by === studentId) {
+            throw new Error("You cannot attempt a test that you created");
+        }
+
+        if (testRow.visibility === "private") {
+            const providedCode =
+                typeof joinCode === "string" ? joinCode.trim().toLowerCase() : "";
+            const expectedCode = testRow.join_code
+                ? String(testRow.join_code).trim().toLowerCase()
+                : "";
+
+            if (!providedCode || !expectedCode || providedCode !== expectedCode) {
+                throw new Error(
+                    "A valid join code is required to start this test"
+                );
+            }
         }
 
         const marksResult = await client.query(

@@ -79,13 +79,17 @@ export async function unPublishTest(testId:Number,adminId:string){
 }
 
 export async function published(){
-    const query=`SELECT id,title,description,duration_minutes,total_marks FROM tests where IS_PUBLISHED=$1`
+    const query=`SELECT id,title,description,duration_minutes,total_marks,
+    created_by,test_type,visibility,start_time,end_time
+    FROM tests where IS_PUBLISHED=$1`
     const res=await pool.query(query,[true])
     return res.rows
 }
 
 export async function testDetails(id:Number){
-    const query=`SELECT id,title,description,duration_minutes,total_marks FROM tests where id=$1 AND IS_PUBLISHED=$2`
+    const query=`SELECT id,title,description,duration_minutes,total_marks,
+    created_by,test_type,visibility,start_time,end_time,is_published
+    FROM tests where id=$1 AND IS_PUBLISHED=$2`
     const res=await pool.query(query,[id,true])
     return res.rows
 }

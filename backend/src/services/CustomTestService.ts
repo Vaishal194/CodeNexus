@@ -18,15 +18,70 @@ export async function createTest(data:customTest,student_id:string){
 }
 
 export async function deleteTest(test_id:number,student_id:string){
-    const query=`DELETE FROM TESTS WHERE id=$1 AND created_by=$2`
-    const values=[test_id,student_id]
-    const result=await pool.query(query,values)
-    return result.rows
+    const client = await pool.connect();
+
+    try{
+        await client.query("BEGIN");
+
+        const owned = await client.query(
+            `SELECT id FROM tests
+             WHERE id=$1 AND created_by=$2 AND test_type='custom'
+             FOR UPDATE`,
+            [test_id, student_id]
+        );
+
+        if (owned.rowCount === 0) {
+            await client.query("ROLLBACK");
+            return [];
+        }
+
+        const mcqs = await client.query(
+            `SELECT DISTINCT mcq_id
+             FROM test_questions
+             WHERE test_id=$1 AND mcq_id IS NOT NULL`,
+            [test_id]
+        );
+
+        // Remove coding problems that were authored specifically for this
+        // custom test so they do not leak into the public problem bank.
+        await client.query(
+            `DELETE FROM problems WHERE source_test_id=$1`,
+            [test_id]
+        );
+
+        const result=await client.query(
+            `DELETE FROM tests WHERE id=$1 AND created_by=$2 RETURNING *`,
+            [test_id, student_id]
+        );
+
+        const mcqIds = mcqs.rows.map((row) => row.mcq_id);
+
+        if (mcqIds.length > 0) {
+            await client.query(
+                `DELETE FROM mcq_questions
+                 WHERE id = ANY($1::bigint[])
+                   AND NOT EXISTS (
+                       SELECT 1 FROM test_questions WHERE mcq_id = mcq_questions.id
+                   )`,
+                [mcqIds]
+            );
+        }
+
+        await client.query("COMMIT");
+
+        return result.rows;
+    }catch(error){
+        await client.query("ROLLBACK");
+        throw error;
+    }finally{
+        client.release();
+    }
 }
 
 export async function updateTestDetails(
     testId: number,
-    data: UpdateTest
+    data: UpdateTest,
+    studentId: string
 ) {
     const fields = [
         "title",
@@ -54,12 +109,14 @@ export async function updateTestDetails(
     }
 
     values.push(testId);
+    values.push(studentId);
 
     const query = `
         UPDATE tests
         SET ${updates.join(", ")},
             updated_at = NOW()
-        WHERE id = $${values.length}
+        WHERE id = $${values.length - 1}
+          AND created_by = $${values.length}
           AND test_type = 'custom'
         RETURNING *;
     `;

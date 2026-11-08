@@ -50,13 +50,14 @@ export async function getHiddenCasesById(req:Request,res:Response){
 
 export async function getTestCasesById(req:Request,res:Response){
     const id=Number(req.params.id)
+    console.log(id)
     try{
         const result=await getTestCases(id)
         return res.status(201).json({
             result
         })
-
     }catch(error:any){
+        console.log(error)
         res.status(500).json({
             "error":error.message
         })

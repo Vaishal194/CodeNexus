@@ -8,6 +8,8 @@ import {
 
 export async function startTestAttempt(req: Request, res: Response) {
     const testId = Number(req.body.test_id);
+    const joinCode =
+        typeof req.body.join_code === "string" ? req.body.join_code : undefined;
     const studentId = req.user?.id;
 
     if (!Number.isInteger(testId) || testId <= 0) {
@@ -25,7 +27,7 @@ export async function startTestAttempt(req: Request, res: Response) {
     }
 
     try {
-        const result = await startAttempt(testId, studentId);
+        const result = await startAttempt(testId, studentId, joinCode);
 
         return res.status(201).json({
             status: "Test attempt started",
@@ -36,6 +38,16 @@ export async function startTestAttempt(req: Request, res: Response) {
             return res.status(400).json({
                 status: "Failed",
                 error: "Invalid test reference"
+            });
+        }
+
+        if (
+            error.message === "You cannot attempt a test that you created" ||
+            error.message === "A valid join code is required to start this test"
+        ) {
+            return res.status(403).json({
+                status: "Failed",
+                error: error.message
             });
         }
 

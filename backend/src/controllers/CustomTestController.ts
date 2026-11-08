@@ -55,6 +55,13 @@ export async function deleteCustomTest(req:Request,res:Response){
 }
 
 export async function updateCustomTest(req:Request,res:Response){
+   const student_id=req.user?.id
+   if(!student_id){
+        return res.status(400).json({
+            "status":"Failed",
+            "error":"Authentication Failed"
+        })
+   }
    const test_id=Number(req.params.test_id)
    if(!Number.isInteger(test_id) || test_id<=0)
         return res.status(500).json({
@@ -63,7 +70,7 @@ export async function updateCustomTest(req:Request,res:Response){
     })
     const data:UpdateTest=req.body
     try{
-        const result=await updateTestDetails(test_id,data)
+        const result=await updateTestDetails(test_id,data,student_id)
         return res.status(200).json({
             result
         })
