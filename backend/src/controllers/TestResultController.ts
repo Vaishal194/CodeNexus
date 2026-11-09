@@ -1,6 +1,6 @@
 
 import type { Request, Response } from "express";
-import { getAttemptResult } from "../services/TestResultService.js";
+import { getAttemptResult, getAttemptResultAdmin } from "../services/TestResultService.js";
 
 export async function getResult(req: Request, res: Response) {
     const student_id=req.user?.id
@@ -21,6 +21,52 @@ export async function getResult(req: Request, res: Response) {
         }
 
         const result = await getAttemptResult(attemptId,student_id);
+
+        return res.status(200).json({
+            status: "success",
+            result
+        });
+    } catch (error: any) {
+        if (error.message === "Attempt not found") {
+            return res.status(404).json({
+                status: "Failed",
+                error: error.message
+            });
+        }
+
+        if (
+            error.message ===
+            "Results are not available until the attempt is submitted"
+        ) {
+            return res.status(409).json({
+                status: "Failed",
+                error: error.message
+            });
+        }
+
+        console.error(error);
+
+        return res.status(500).json({
+            status: "Failed",
+            error: "Internal server error"
+        });
+    }
+}
+
+
+export async function getResultAdmin(req: Request, res: Response) {
+    const student_id=String(req.params.studentId)
+    try {
+        const attemptId = Number(req.params.attemptId);
+
+        if (!Number.isInteger(attemptId) || attemptId <= 0) {
+            return res.status(400).json({
+                status: "Failed",
+                error: "A valid attempt ID is required"
+            });
+        }
+
+        const result = await getAttemptResultAdmin(attemptId,student_id);
 
         return res.status(200).json({
             status: "success",
